@@ -19,7 +19,11 @@ AsyncWebServer server(80);
 
 String speed = "0";
 long duration;
-float distanceCm = 0, speedKmph = 0, curDistance = 0, lastDistance = 0;
+float distanceCM = 0, speedKmph = 0, curDistance = 0, lastDistance = 0;
+
+float speed_var = 0;
+unsigned short counter = 0;
+
 bool isCounting = false;
 long int start, end;
 
@@ -30,45 +34,47 @@ void notFound(AsyncWebServerRequest *request) {
 float getDistance(){
     digitalWrite(TRIG_PIN, LOW);
     delayMicroseconds(2);
-    // Sets the TRIG_PIN on HIGH state for 10 micro seconds
+    
     digitalWrite(TRIG_PIN, HIGH);
     delayMicroseconds(10);
     digitalWrite(TRIG_PIN, LOW);
-
-    // Reads the ECHO_PIN, returns the sound wave travel time in microseconds
-    duration = pulseIn(ECHO_PIN, HIGH);
-    distanceCm = duration * SOUND_SPEED/2;
-
-    return distanceCm;
+    
+    duration = pulseIn(ECHO_PIN, HIGH, 12000);  // set timeout to 12 miliseconds
+    if(!duration){  // in case of timeout
+        duration = getDistance();
+    }
+    distanceCM = (duration * SOUND_SPEED) / 2; // cm
+    printf("Returning distance of %f CM\n", distanceCM);
+    return distanceCM;
 }
 
 void getSpeed(){
+    counter++;
+    float temp_speed = 0;
     if(!isCounting){
         start = millis();
         isCounting = true;
     }
-    else{
-        end = millis();        
-        lastDistance = curDistance;
-        curDistance = getDistance();
-        // Serial.printf("curDistance: %f lastDistance: %f end: %ld start: %ld\n", curDistance, lastDistance, end, start);
-        speedKmph = (curDistance - lastDistance) / ((end - start) / 1000.0 );
-        if(curDistance >= 2000){    //ignore reading
-            curDistance = lastDistance;
-        }
-        else{
-            start = millis();
-            if(speedKmph < 1 && speedKmph > -1){
-                speed = 0;
-            }
-            else{
-                if(speedKmph > 100 || speedKmph < -100){}
-                else{
-                    speedKmph > 0 ? speedKmph : speedKmph = speedKmph * -1;
-                    speed = String(speedKmph);
-                }
-            }
-        }
+
+    end = millis();        
+    lastDistance = curDistance;
+    curDistance = getDistance();
+
+
+    start = millis();
+    temp_speed = abs(((curDistance - lastDistance) / ((end - start) / 1000.0))/ 27.777777777778);    // converting from cm/s to km/h
+
+    printf("temp_speed = %f\n", temp_speed);
+
+    if(temp_speed < 100){
+        speed_var += temp_speed;
+    }
+    
+    if(counter == 4){
+        speed_var /= 4;
+        speed = String(speed_var);
+        speed_var = 0;
+        counter = 0;
     }
 }
 
@@ -78,12 +84,14 @@ void setup() {
     pinMode(TRIG_PIN, OUTPUT);
     pinMode(ECHO_PIN, INPUT);
     
-    // WiFi.begin(LSSID, LPASSWORD);           // Connect to a WiFi
+    // If you want to connect to a WiFi network instead
+    // WiFi.begin(LSSID, LPASSWORD);           
     // while (WiFi.status() != WL_CONNECTED) {
     //     delay(500);
     //     Serial.print(".");
     // }
 
+    // If you want to create a Access Point
     WiFi.softAP(AP_SSID,AP_PASSWORD);          
     WiFi.softAPConfig(local_ip, gateway, subnet);
 
@@ -91,8 +99,6 @@ void setup() {
 
     Serial.print("IP Address: ");           
     Serial.println(WiFi.localIP());
-
-    getSpeed();
 
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
         String html = "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Number Display</title><style>html,body{width:100%;height:100%;margin:0;padding:0;box-sizing:border-box}.container{display:flex;flex-direction:column;justify-content:center;align-items:center;height:100%}.speed{font-family:sans-serif;font-size:12vw;font-weight:bold;max-width:5em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.unit{font-family:sans-serif;font-size:6vw;text-transform:uppercase;margin-top:10px}</style></head><body><div class=\"container\"><text class=\"speed\"x=\"50\"y=\"50\"text-anchor=\"middle\" dominant-baseline=\"central\">" + speed + "</text><div class=\"unit\">km/h</div></div></body></html>";
@@ -109,7 +115,6 @@ void setup() {
 
 void loop() {
     getSpeed();
-    Serial.print("Distance (cm): ");
-    Serial.println(distanceCm);
-    delay(750);
+    // Serial.print("Distance (cm): ");
+    // Serial.println(distanceCM);
 }
