@@ -1,15 +1,13 @@
-#include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <time.h>
-#include <string>
 
-#define TRIG_PIN    12
-#define ECHO_PIN    14
-#define SOUND_SPEED 0.034
-#define AP_SSID        "ESP8266-AP"
-#define AP_PASSWORD    "TestPassword"
+#define TRIG_PIN        12
+#define ECHO_PIN        14
+#define SOUND_SPEED     0.034
+#define AP_SSID         "ESP8266-AP"
+#define AP_PASSWORD     "TestPassword"
 
 IPAddress local_ip(192,168,1,1);
 IPAddress gateway(192,168,1,1);
@@ -19,7 +17,7 @@ AsyncWebServer server(80);
 
 String speed = "0";
 long duration;
-float distanceCM = 0, speedKmph = 0, curDistance = 0, lastDistance = 0;
+float distanceCM = 0, curDistance = 0, lastDistance = 0;
 
 float speed_var = 0;
 unsigned short counter = 0;
@@ -43,8 +41,8 @@ float getDistance(){
     if(!duration){  // in case of timeout
         duration = getDistance();
     }
-    distanceCM = (duration * SOUND_SPEED) / 2; // cm
-    printf("Returning distance of %f CM\n", distanceCM);
+    distanceCM = (duration * SOUND_SPEED) / 2; 
+
     return distanceCM;
 }
 
@@ -59,7 +57,6 @@ void getSpeed(){
     end = millis();        
     lastDistance = curDistance;
     curDistance = getDistance();
-
 
     start = millis();
     temp_speed = abs(((curDistance - lastDistance) / ((end - start) / 1000.0))/ 27.777777777778);    // converting from cm/s to km/h
@@ -115,6 +112,6 @@ void setup() {
 
 void loop() {
     getSpeed();
-    // Serial.print("Distance (cm): ");
-    // Serial.println(distanceCM);
+
+    printf("Distance (cm): %f\n",distanceCM);
 }
