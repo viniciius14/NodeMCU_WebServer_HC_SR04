@@ -5,7 +5,7 @@
 
 #define TRIG_PIN        12
 #define ECHO_PIN        14
-#define SOUND_SPEED     0.034
+#define SOUND_SPEED     0.0343
 #define AP_SSID         "ESP8266-AP"
 #define AP_PASSWORD     "TestPassword"
 
